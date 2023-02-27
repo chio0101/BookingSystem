@@ -1,0 +1,100 @@
+﻿@model BookingViewModel
+
+@{
+    ViewData["Title"] = "My Booking Page";
+}
+<style>
+.styled-table {
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 0.9em;
+    font-family: sans-serif;
+    min-width: 400px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.styled-table thead tr {
+    background-color: #009879;
+    color: #ffffff;
+    text-align: left;
+}
+
+.styled-table th,
+.styled-table td {
+    padding: 12px 15px;
+    width: 600px;
+}
+
+.styled-table tbody tr {
+    border-bottom: 1px solid #dddddd;
+}
+
+.styled-table tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+.styled-table tbody tr:last-of-type {
+    border-bottom: 2px solid #009879;
+}
+</style>
+
+<style>
+.btn {
+    display: flex;
+    align-items: center;
+    background: none;
+    height: 48px;
+    font-size: 16px;
+    color: red;
+}
+</style>
+
+<h1>@ViewData["Title"]</h1>
+
+<table class="styled-table">
+    <thead>
+        <tr>
+            <th>Room</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Booking At</th>
+            <th>Option</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var booking in Model.BookingList)
+        {
+            if (booking.UserName == ViewBag.UserName)
+            {
+                string hour = Model.HourList.Find(x => x.Id == booking.Hour.Id).Hour;
+                string min = Model.MinList.Find(x => x.Id == booking.Min.Id).Min;
+                string time = hour + ":" + min;
+                <tr>
+                    <td>@Model.RoomList.Find(x => x.Id == booking.Room.Id).Name</td>
+                    <td>@booking.Date.ToString("yyyy-MM-dd")</td>
+                    <td>@time</td>
+                    <td>@booking.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td><button class="btn" onclick="deleteBooking(@booking.Id)">Delete</button></td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script type="text/javascript">
+        function deleteBooking(id) {
+            $.ajax({
+                type: "GET",
+                url: "DeleteBooking/"+ id,
+                success: function(response) {
+                    location.reload();
+                    return true;
+                },
+                error: function (xhr, exception) {
+                    return false;
+                }
+            });
+        }
+    </script>
+}

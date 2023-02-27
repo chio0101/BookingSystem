@@ -1,0 +1,265 @@
+﻿@model BookingViewModel
+
+@{
+    ViewData["Title"] = "Booking Page";
+    ViewData["TableWidth"] = ((Model.HourList.Count() + 1) * 130).ToString() + "px";
+}
+
+<style>
+    .styled-table {
+        border-collapse: collapse;
+        text-align: center;
+        margin: 25px 0;
+        font-size: 0.9em;
+        font-family: sans-serif;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        table-layout: fixed;
+        width: @ViewData["TableWidth"];
+        line-height: 60px;
+    }
+
+    .styled-table caption{
+        caption-side: top;
+        text-align: center;
+        font-size: 2.0em;
+    }
+
+    .styled-table thead tr {
+        background-color: #009879;
+        color: #ffffff;
+        text-align: center;
+        border: 1px solid #dddddd;
+    }
+
+    .styled-table thead tr th {
+        border: 1px solid #dddddd;
+    }
+
+    .styled-table th,
+    .styled-table td {
+        padding: 12px 15px;
+    }
+
+    .styled-table tbody tr {
+        border-bottom: 1px solid #dddddd;
+    }
+
+    .styled-table tbody tr:nth-of-type(even) {
+        background-color: #f3f3f3;
+    }
+
+    .styled-table tbody tr:last-of-type {
+        border-bottom: 2px solid #009879;
+    }
+
+    .styled-table .trhead {
+        background-color: #009879;
+        color: #ffffff;
+        text-align: center;
+    }
+</style>
+<style>
+    .book-btn {
+        margin: 4px;
+        background-color: #ffffff;
+        border-radius: 4px;
+        border: 1px solid #009879;
+        overflow: hidden;
+        float: left;
+        width: 100%;
+    }
+
+    .book-btn label {
+        float: left; line-height: 3.0em;
+        width: 100%; height: 3.0em;
+    }
+
+    .book-btn label span {
+        text-align: center;
+        display: block;
+    }
+
+    .book-btn label input {
+        position: absolute;
+        display: none;
+    }
+
+    .book-btn label input + span {
+        color: #000000;
+    }
+
+    .book-btn input:checked + span {
+        color: #ffffff;
+        text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+    }
+
+    .action input:checked + span {
+        background-color: #F75A1B;
+    }
+</style>
+
+<h1>@ViewData["Title"]</h1>
+<br>
+<label>Room:</label>
+<select form="checkForm" id="roomPicker">
+@foreach (var item in Model.RoomList)
+{
+    <option value=@item.Id> @item.Name </option>
+}
+</select>
+<br>
+<label>Choose your preferred party date: </label>
+<input type="date" id="datePicker">
+<br>
+<br>
+<div id="timesheet"></div>
+
+
+@section Scripts{
+    <script>
+        // set calendar default date to current date
+        var today = new Date();
+        $("#datePicker").val(today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2));
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(genForm());
+
+        document.getElementById("roomPicker").addEventListener("change", (event) => {
+            genForm();
+        });
+
+        document.getElementById("datePicker").addEventListener("change", (event) => {
+            genForm();
+        });
+
+        function genForm() {
+            var userName = "@ViewBag.UserName";
+            var selectedRoomId = document.getElementById("roomPicker").value;
+            var selectedDate = document.getElementById("datePicker").value;
+            var bookingList = JSON.parse('@Html.Raw(Json.Serialize(@Model.BookingList))');
+            var roomList = JSON.parse('@Html.Raw(Json.Serialize(@Model.RoomList))');
+            var hourList = JSON.parse('@Html.Raw(Json.Serialize(@Model.HourList))');
+            var minList = JSON.parse('@Html.Raw(Json.Serialize(@Model.MinList))');
+
+            if (document.getElementById("timesheetForm")) {
+                var timesheetForm = document.getElementById("timesheetForm");
+                timesheetForm.remove();
+            };
+
+            var form = document.createElement("form");
+            form.setAttribute("method", "post");
+            form.setAttribute("action", "AddBooking");
+            form.setAttribute("id", "timesheetForm");
+
+            var table = document.createElement("table");
+            table.setAttribute("class", "styled-table");
+
+            var selectedRoom = roomList.find(room => room.id == selectedRoomId).name;
+            var caption = document.createElement("caption");
+            caption.appendChild(document.createTextNode(selectedRoom + ", " + selectedDate + " Timesheet"));
+            table.appendChild(caption);
+
+            var thead = document.createElement("thead");
+            var tr = document.createElement("tr");
+            var th = document.createElement("th");
+
+            tr.appendChild(th);
+            for (let hi in hourList) {
+                var th = document.createElement("th");
+                th.appendChild(document.createTextNode(hourList[hi].hour));
+                tr.appendChild(th);
+            }
+            thead.appendChild(tr)
+            table.appendChild(thead);
+
+            var tbody = document.createElement("tbody");
+            for (let mi in minList) {
+                var tr = document.createElement("tr");
+                var td = document.createElement("td");
+                td.setAttribute("class", "trhead");
+                td.appendChild(document.createTextNode(minList[mi].min));
+                tr.appendChild(td);
+                for (let hi in hourList) {
+                    var td = document.createElement("td");
+
+                    var booking = bookingList.find(
+                        booking => (
+                            booking.room.id == selectedRoomId &&
+                            booking.date.split('T')[0] == selectedDate &&
+                            booking.hour.id == hourList[hi].id &&
+                            booking.min.id == minList[mi].id
+                        )
+                    )
+                    if (booking) {
+                        td.appendChild(document.createTextNode(booking.userName + " Booked"));
+                    }
+                    else if (isTimeExpired(selectedDate, hourList[hi].hour, minList[mi].min)) {
+                        td.appendChild(document.createTextNode("Expired"));
+                    }
+                    else {
+                        var input = document.createElement("input");
+                        input.setAttribute("type", "checkbox");
+                        input.setAttribute("name", "timeId");
+                        input.setAttribute("value", timeId(hourList[hi].id,  minList[mi].id));
+
+                        var span = document.createElement("span");
+                        span.appendChild(document.createTextNode("Book"));
+
+                        var label = document.createElement("label");
+                        label.appendChild(input);
+                        label.appendChild(span);
+
+                        var div = document.createElement("div");
+                        div.setAttribute("class", "book-btn action");
+                        div.appendChild(label);
+
+                        td.appendChild(div);
+                    }
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
+            table.appendChild(tbody);
+            form.appendChild(table);
+
+            var input = document.createElement("input");
+            input.setAttribute("name", "userName");
+            input.setAttribute("value", userName);
+            input.setAttribute('type', 'hidden');
+            form.appendChild(input);
+
+            var input = document.createElement("input");
+            input.setAttribute("name", "roomId");
+            input.setAttribute("value", selectedRoomId);
+            input.setAttribute('type', 'hidden');
+            form.appendChild(input);
+
+            var input = document.createElement("input");
+            input.setAttribute("name", "date");
+            input.setAttribute("value", selectedDate);
+            input.setAttribute('type', 'hidden');
+            form.appendChild(input);
+
+            var submit = document.createElement("input");
+            submit.setAttribute("type", "submit");
+            submit.setAttribute("value", "Submit");
+
+            form.appendChild(submit);
+
+            document.getElementById("timesheet").appendChild(form);
+        }
+
+        function timeId(h, m) {
+            return (h.toString() + m.toString());
+        }
+
+        function isTimeExpired(date, hour, min) {
+            var dateTime = Date.parse(date + " " + hour + ":" + min + ":" + "00 ");
+            var currentTime =  Date.now();
+
+            return (currentTime > dateTime) ? true : false;
+        };
+
+    </script>
+}
