@@ -100,7 +100,7 @@
 
 <h1>@ViewData["Title"]</h1>
 <br>
-<label>Room:</label>
+<label>Meeting Room:</label>
 <select form="checkForm" id="roomPicker">
 @foreach (var item in Model.RoomList)
 {
@@ -108,7 +108,8 @@
 }
 </select>
 <br>
-<label>Choose your preferred party date: </label>
+<br>
+<label>Date: </label>
 <input type="date" id="datePicker">
 <br>
 <br>
